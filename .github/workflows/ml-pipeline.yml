@@ -23,9 +23,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install mlflow==2.19.0 scikit-learn pandas numpy
 
-      - name: Run MLflow Project
+      - name: Run Training Script
         run: |
-          mlflow run MLProject/ -P n_estimators=200 -P max_depth=15 --env-manager=local
+          python MLProject/modelling.py --n_estimators 200 --max_depth 15
 
       - name: Upload model artifacts to GitHub
         uses: actions/upload-artifact@v4

@@ -123,8 +123,9 @@ def main() -> None:
 
     print(f"Training with n_estimators={args.n_estimators}, max_depth={args.max_depth}")
 
-    mlflow.set_tracking_uri(TRACKING_URI)
-    mlflow.set_experiment(EXPERIMENT_NAME)
+    # NOTE: mlflow run handles tracking URI and experiment automatically.
+    # Do NOT call set_tracking_uri / set_experiment here — they conflict with
+    # the parent run created by mlflow run.
 
     X_train, X_test, y_train, y_test = load_data(DATA_DIR)
 

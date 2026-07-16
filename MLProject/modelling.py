@@ -10,7 +10,6 @@ Usage (via MLflow Project):
 """
 
 import os
-import sys
 import argparse
 import pandas as pd
 import numpy as np
@@ -32,7 +31,7 @@ from sklearn.metrics import (
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = SCRIPT_DIR  # preprocessed CSVs are in the same folder as this script
-TRACKING_URI = "http://127.0.0.1:5000"
+TRACKING_URI = "file:./mlruns"
 EXPERIMENT_NAME = "telco-churn-ci"
 RANDOM_STATE = 42
 

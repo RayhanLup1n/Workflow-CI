@@ -24,7 +24,7 @@ jobs:
 
       - name: Run MLflow Project
         env:
-          MLFLOW_TRACKING_URI = "file./mlruns"
+          MLFLOW_TRACKING_URI: "file./mlruns"
         run: |
           cd MLProject
           mlflow run . --env-manager=local

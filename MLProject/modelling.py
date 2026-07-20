@@ -11,8 +11,9 @@ from sklearn.model_selection import train_test_split
 DATASET_PATH = os.path.join('telco_churn_preprocessing', 'telco_churn_preprocessed.csv')
 
 # MLFlow Configuration
-EXPERIMENT_NAME = 'telco_churn_experiment_baseline'
-mlflow.set_tracking_uri('http://127.0.0.1:5001/')
+EXPERIMENT_NAME = "telco_churn_experiment_baseline"
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_experiment(EXPERIMENT_NAME)
 mlflow.sklearn.autolog()
 

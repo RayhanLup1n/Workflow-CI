@@ -1,140 +1,77 @@
-"""
-modelling.py — Modelling script for MLflow Project (Workflow CI).
-
-Trains a RandomForest classifier on preprocessed Telco Churn data
-and logs metrics + model to MLflow. Designed to run inside a
-GitHub Actions CI pipeline.
-
-Usage (via MLflow Project):
-    mlflow run MLProject/ -P n_estimators=200 -P max_depth=15
-"""
-
 import os
-import argparse
-import pandas as pd
-import numpy as np
+
 import mlflow
 import mlflow.sklearn
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    confusion_matrix,
-)
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.model_selection import train_test_split
 
+# PATH Configuration
+DATASET_PATH = os.path.join('telco_churn_preprocessing', 'telco_churn_preprocessed.csv')
 
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = SCRIPT_DIR  # preprocessed CSVs are in the same folder as this script
-TRACKING_URI = "file:./mlruns"
-EXPERIMENT_NAME = "telco-churn-ci"
-RANDOM_STATE = 42
+# MLFlow Configuration
+EXPERIMENT_NAME = 'telco_churn_experiment_baseline'
+mlflow.set_tracking_uri('http://127.0.0.1:5001/')
+mlflow.set_experiment(EXPERIMENT_NAME)
+mlflow.sklearn.autolog()
 
+def load_data(path: str) -> tuple[pd.DataFrame, pd.Series]:
+    """
+    Load Preprocessed dataset and split into features and target
+    """
+    df = pd.read_csv(path)
+    features = df.drop(columns=["Churn"])
+    target = df["Churn"]
+    return features, target
 
-# ---------------------------------------------------------------------------
-# Load data
-# ---------------------------------------------------------------------------
-def load_data(data_dir: str) -> tuple:
-    """Load preprocessed train/test data from CSV files."""
-    X_train = pd.read_csv(os.path.join(data_dir, "X_train.csv"))
-    X_test = pd.read_csv(os.path.join(data_dir, "X_test.csv"))
-    y_train = pd.read_csv(os.path.join(data_dir, "y_train.csv")).values.ravel()
-    y_test = pd.read_csv(os.path.join(data_dir, "y_test.csv")).values.ravel()
-    print(f"X_train: {X_train.shape}, X_test: {X_test.shape}")
-    return X_train, X_test, y_train, y_test
-
-
-# ---------------------------------------------------------------------------
-# Train
-# ---------------------------------------------------------------------------
-def train_model(
-    X_train: pd.DataFrame,
-    y_train: np.ndarray,
-    n_estimators: int = 200,
-    max_depth: int = 15,
-) -> RandomForestClassifier:
-    """Train a RandomForest classifier."""
-    model = RandomForestClassifier(
-        n_estimators=n_estimators,
-        max_depth=max_depth,
-        min_samples_split=5,
-        class_weight="balanced",
-        random_state=RANDOM_STATE,
-        n_jobs=-1,
+def split_data(
+    features: pd.DataFrame, 
+    target: pd.Series,) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    """
+    Split data into training and testing sets with stratification
+    """
+    return train_test_split(
+        features, target, test_size=0.2, random_state=42, stratify=target
     )
-    model.fit(X_train, y_train)
+
+def train_model(
+    x_train: pd.DataFrame, y_train:pd.Series) -> RandomForestClassifier:
+    """
+    Train a Random Forest Classifier
+    """
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(x_train, y_train)
     return model
 
-
-# ---------------------------------------------------------------------------
-# Evaluate & log
-# ---------------------------------------------------------------------------
-def evaluate_and_log(
-    model: RandomForestClassifier,
-    X_train: pd.DataFrame,
-    X_test: pd.DataFrame,
-    y_train: np.ndarray,
-    y_test: np.ndarray,
-) -> None:
-    """Evaluate model and manually log all metrics to MLflow."""
-    y_train_pred = model.predict(X_train)
-    y_test_pred = model.predict(X_test)
-
-    metrics = {
-        "train_accuracy": accuracy_score(y_train, y_train_pred),
-        "test_accuracy": accuracy_score(y_test, y_test_pred),
-        "train_precision": precision_score(y_train, y_train_pred),
-        "test_precision": precision_score(y_test, y_test_pred),
-        "train_recall": recall_score(y_train, y_train_pred),
-        "test_recall": recall_score(y_test, y_test_pred),
-        "train_f1": f1_score(y_train, y_train_pred),
-        "test_f1": f1_score(y_test, y_test_pred),
-        "train_roc_auc": roc_auc_score(y_train, model.predict_proba(X_train)[:, 1]),
-        "test_roc_auc": roc_auc_score(y_test, model.predict_proba(X_test)[:, 1]),
+def evaluate_model(
+    model: RandomForestClassifier, x_test: pd.DataFrame, y_test: pd.Series
+) -> dict[str, float]:
+    """
+    Evaluate trained model on test set.
+    """
+    predictions = model.predict(x_test)
+    return{
+        "accuracy": accuracy_score(y_test, predictions),
+        "f1_score": f1_score(y_test, predictions)
     }
 
-    for name, value in metrics.items():
-        mlflow.log_metric(name, value)
-
-    # Log model
-    mlflow.sklearn.log_model(model, "model")
-
-    # Print results
-    tn, fp, fn, tp = confusion_matrix(y_test, y_test_pred).ravel()
-    print(f"Test Accuracy:  {metrics['test_accuracy']:.4f}")
-    print(f"Test F1 Score:  {metrics['test_f1']:.4f}")
-    print(f"Confusion: TN={tn} FP={fp} FN={fn} TP={tp}")
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 def main() -> None:
-    """Run training pipeline with CLI arguments."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--n_estimators", type=int, default=200)
-    parser.add_argument("--max_depth", type=int, default=15)
-    args = parser.parse_args()
+    """
+    End-to-end model training pipeline with MLFlow tracking.
+    """
+    features, target = load_data(DATASET_PATH)
+    x_train, x_test, y_train, y_test = split_data(features, target)
 
-    print(f"Training with n_estimators={args.n_estimators}, max_depth={args.max_depth}")
+    with mlflow.start_run(run_name="baseline_random_forest"):
+        model = train_model(x_train, y_train)
+        metrics = evaluate_model(model, x_test, y_test)
 
-    # NOTE: mlflow run handles tracking URI and experiment automatically.
-    # Do NOT call set_tracking_uri / set_experiment here — they conflict with
-    # the parent run created by mlflow run.
+        # Log additional metrics manually
+        mlflow.log_metrics(metrics)
 
-    X_train, X_test, y_train, y_test = load_data(DATA_DIR)
+        print(f"Accuracy: {metrics['accuracy']:.4f}")
+        print(f"F1 Score: {metrics['f1_score']:.4f}")
 
-    with mlflow.start_run(run_name="ci-training"):
-        model = train_model(X_train, y_train, args.n_estimators, args.max_depth)
-        evaluate_and_log(model, X_train, X_test, y_train, y_test)
-
-    print("[DONE] CI training completed.")
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -1,8 +1,5 @@
-name: telco-churn-ci
+name: telco_churn_training
 
 entry_points:
   main:
-    parameters:
-      n_estimators: {type: int, default: 200}
-      max_depth: {type: int, default: 15}
-    command: "python modelling.py --n_estimators {n_estimators} --max_depth {max_depth}"
+    command: "python modelling.py"

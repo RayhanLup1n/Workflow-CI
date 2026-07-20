@@ -25,4 +25,4 @@ jobs:
       - name: Run MLflow Project
         run: |
           cd MLProject
-          mlflow run . --run-name
+          mlflow run . --env-manager=local

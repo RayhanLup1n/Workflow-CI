@@ -1,0 +1,5 @@
+name: telco_churn_training
+
+entry_points:
+  main:
+    command: "python modelling.py"

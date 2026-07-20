@@ -64,15 +64,14 @@ def main() -> None:
     features, target = load_data(DATASET_PATH)
     x_train, x_test, y_train, y_test = split_data(features, target)
 
-    with mlflow.start_run(run_name="baseline_random_forest"):
-        model = train_model(x_train, y_train)
-        metrics = evaluate_model(model, x_test, y_test)
+    model = train_model(x_train, y_train)
+    metrics = evaluate_model(model, x_test, y_test)
 
-        # Log additional metrics manually
-        mlflow.log_metrics(metrics)
+    # Log additional metrics manually
+    mlflow.log_metrics(metrics)
 
-        print(f"Accuracy: {metrics['accuracy']:.4f}")
-        print(f"F1 Score: {metrics['f1_score']:.4f}")
+    print(f"Accuracy: {metrics['accuracy']:.4f}")
+    print(f"F1 Score: {metrics['f1_score']:.4f}")
 
 if __name__ == '__main__':
     main()
